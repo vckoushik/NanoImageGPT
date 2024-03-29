@@ -1,32 +1,35 @@
+import tensorflow as tf
 import os
-import requests
-from PIL import Image
+import cv2
+import imghdr
 import numpy as np
+from matplotlib import pyplot as plt
 
-# Function to download and save image
-def download_image(url, filename):
-    response = requests.get(url)
-    with open(filename, 'wb') as f:
-        f.write(response.content)
+gpus = tf.config.experimental.list_physical_devices('GPU')
+for gpu in gpus: 
+    tf.config.experimental.set_memory_growth(gpu, True)
 
-# Example image URLs
-image_urls = [
-    'https://i.natgeofe.com/n/548467d8-c5f1-4551-9f58-6817a8d2c45e/NationalGeographic_2572187_square.jpg',
-    'https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Cat_August_2010-4.jpg/1200px-Cat_August_2010-4.jpg',
-    # Add more image URLs as needed
-]
+tf.config.list_physical_devices('GPU')
 
-# Download and save images
-for i, url in enumerate(image_urls):
-    filename = f'image_{i}.jpg'
-    download_image(url, filename)
-
-# Process images
-for i in range(len(image_urls)):
-    filename = f'image_{i}.jpg'
-    img = Image.open(filename)
-    # Perform image processing tasks here (e.g., resize, convert to numpy array, etc.)
-    # Example:
-    img_resized = img.resize((224, 224))  # Resize image to 224x224
-    img_array = np.array(img_resized)  # Convert image to numpy array
-    # Further processing can be done here
+data_dir = 'v_data'
+image_exts = ['jpeg','jpg', 'bmp', 'png']
+for image_class in os.listdir(data_dir): 
+    for image in os.listdir(os.path.join(data_dir, image_class)):
+        image_path = os.path.join(data_dir, image_class, image)
+        try: 
+            img = cv2.imread(image_path)
+            tip = imghdr.what(image_path)
+            if tip not in image_exts: 
+                print('Image not in ext list {}'.format(image_path))
+                os.remove(image_path)
+        except Exception as e: 
+            print('Issue with image {}'.format(image_path))
+            # os.remove(image_path)
+ 
+data = tf.keras.utils.image_dataset_from_directory('v_data')
+data_iterator = data.as_numpy_iterator()
+batch = data_iterator.next()
+fig, ax = plt.subplots(ncols=4, figsize=(20,20))
+for idx, img in enumerate(batch[0][:4]):
+    ax[idx].imshow(img.astype(int))
+    ax[idx].title.set_text(batch[1][idx])
